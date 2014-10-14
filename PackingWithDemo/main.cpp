@@ -36,6 +36,7 @@ void findDmax_ResultantForce();
 void perturb();
 void solve();
 void printResult( int waitTime = 1 );
+double dist( double x1, double y1, double x2, double y2 );
 
 
 
@@ -142,15 +143,10 @@ void greedyinit()
 
 double embedDepthBetweenObjs( int i, int j )
 {
-    random_device rd;
-    mt19937 gen( rd() );
-    double amp = 0.125;
-    poisson_distribution<> randExpand( 1 / amp );
-
     double dx = x[i] - x[j];
     double dy = y[i] - y[j];
     double embedDepth = r[i] + r[j] - (sqrt( dx*dx + dy*dy ));
-    return embedDepth > 0 ? amp * randExpand( gen ) * embedDepth : 0;
+    return embedDepth > 0 ? embedDepth : 0;
 }
 
 double embedDepthToContainer( int i )
@@ -233,14 +229,27 @@ void perturb()
     uniform_int_distribution<> randNode( 0, ObjectNum - 1 );
     uniform_real_distribution<> randCoord( -ContainerRadius, ContainerRadius );
 
-    int i = randNode( gen );
-
     double radius;
-    do {
-        x[i] = randCoord( gen );
-        y[i] = randCoord( gen );
-        radius = sqrt( x[i] * x[i] + y[i] * y[i] );
-    } while (radius >= ContainerRadius);
+    while (true) {
+        int i = randNode( gen );
+
+        double nx = randCoord( gen );
+        double ny = randCoord( gen );
+        radius = sqrt( nx * nx + ny * ny );
+        for (int j = 0; j < ObjectNum; j++) {
+            if (i != j) {
+                if (dist( nx, ny, x[j], y[j] ) < (r[j] + r[i] / 16)) {
+                    radius = ContainerRadius + ACCURACY;
+                }
+            }
+        }
+
+        if (radius <= ContainerRadius) {
+            x[i] = nx;
+            y[i] = ny;
+            break;
+        }
+    }
 }
 
 void solve()
@@ -248,25 +257,13 @@ void solve()
     random_device rd;
     mt19937 gen( rd() );
     uniform_int_distribution<> tabuRand( -ObjectNum / 8, ObjectNum / 8 );
+    uniform_int_distribution<> enforceRand( 0, MAX_NO_IMPROVE_STEP );
 
 
     for (; true; iterCount++) {
         findDmax();
 
-        printResult();
-        if (DmaxNoTabu < ACCURACY) {
-            break;
-        } else if (deltaDmax < MERELY_CHANGE) {
-            DmaxNoChange++;
-        }
-
-        if (DmaxNoChange > MAX_NO_IMPROVE_STEP) {
-            DmaxNoChange = 0;
-            perturb();
-            continue;
-        }
-
-        double u = Dmax + ACCURACY;
+        double u = ((enforceRand( gen ) < DmaxNoChange) ? 1 : 1) * Dmax + ACCURACY;
         if (obj2 == -1) {   // embed in container
             x[obj1] += (x[obj1] > 0 ? -1 : 1) * u / sqrt( 1 + abs( y[obj1] / x[obj1] ) );
             y[obj1] += (y[obj1] > 0 ? -1 : 1) * u / sqrt( 1 + abs( x[obj1] / y[obj1] ) );
@@ -280,6 +277,21 @@ void solve()
             y[obj2] += (dy > 0 ? -1 : 1) * u / sqrt( 1 + abs( dx / dy ) ) * (1 - rate);
         }
         tabuTable[obj1] = iterCount + ObjectNum / 4 + tabuRand( gen );
+
+        printResult();
+        if (DmaxNoTabu < ACCURACY) {
+            break;
+        } else if (deltaDmax < MERELY_CHANGE) {
+            DmaxNoChange++;
+        } else {
+            DmaxNoChange = 0;
+        }
+
+        if (DmaxNoChange > MAX_NO_IMPROVE_STEP) {
+            DmaxNoChange = 0;
+            perturb();
+            continue;
+        }
     }
 }
 
@@ -294,4 +306,11 @@ void printResult( int waitTime )
 
     imshow( WINDOW_NAME, image );
     waitKey( waitTime );
+}
+
+double dist( double x1, double y1, double x2, double y2 )
+{
+    double dx = x1 - x2;
+    double dy = y1 - y2;
+    return sqrt( dx * dx + dy * dy );
 }

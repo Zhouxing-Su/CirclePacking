@@ -23,7 +23,7 @@
     <Text Include="README.txt" />
     <Text Include="testcase2.txt" />
     <Text Include="testcase4.txt" />
-    <Text Include="testcase1.txt" />
+    <Text Include="testcase3.txt" />
     <Text Include="testcase.txt" />
   </ItemGroup>
 </Project>
