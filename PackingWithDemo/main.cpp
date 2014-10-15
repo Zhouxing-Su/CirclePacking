@@ -34,6 +34,8 @@ void findDmax();
 void findDmax_SingleForce();
 void findDmax_ResultantForce();
 void perturb();
+void perturb_randomDrop();
+void perturb_switchPair();
 void solve();
 void printResult( int waitTime = 1 );
 double dist( double x1, double y1, double x2, double y2 );
@@ -224,6 +226,11 @@ void findDmax_ResultantForce()
 
 void perturb()
 {
+    perturb_randomDrop();
+}
+
+void perturb_randomDrop()
+{
     random_device rd;
     mt19937 gen( rd() );
     uniform_int_distribution<> randNode( 0, ObjectNum - 1 );
@@ -250,6 +257,11 @@ void perturb()
             break;
         }
     }
+}
+
+void perturb_switchPair()
+{
+
 }
 
 void solve()
